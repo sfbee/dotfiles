@@ -1,0 +1,203 @@
+" ============================================================
+" .vimrc - Go + Perl development starting config (macOS)
+" ============================================================
+
+" ---------- Core settings ----------
+set nocompatible              " use Vim defaults, not vi
+filetype off                  " required before Vundle loads plugins
+
+set encoding=utf-8
+set backspace=indent,eol,start
+set hidden                    " allow switching buffers without saving
+set number relativenumber     " absolute line for cursor, relative elsewhere
+set ruler
+set showcmd
+set wildmenu
+set laststatus=2              " always show status line
+set mouse=a                   " enable mouse in terminal Vim
+set clipboard=unnamed         " share clipboard with macOS
+
+" Search
+set incsearch
+set hlsearch
+set ignorecase
+set smartcase
+
+" Indentation defaults (overridden per-filetype below)
+set autoindent
+set smartindent
+set expandtab
+set tabstop=4
+set shiftwidth=4
+set softtabstop=4
+
+" Splits open in a more natural direction
+set splitbelow
+set splitright
+
+" Keep swap/backup files out of the way
+set backupdir=~/.vim/backup//
+set directory=~/.vim/swap//
+set undodir=~/.vim/undo//
+set undofile
+silent !mkdir -p ~/.vim/backup ~/.vim/swap ~/.vim/undo
+
+let mapleader = ","
+
+" ============================================================
+" Vundle setup
+" ============================================================
+set rtp+=~/.vim/bundle/Vundle.vim
+call vundle#begin()
+
+" required
+Plugin 'VundleVim/Vundle.vim'
+
+" --- Go development ---
+Plugin 'fatih/vim-go'
+
+" --- Perl development ---
+Plugin 'vim-perl/vim-perl'
+
+" --- Linting (works for both Go and Perl via external tools) ---
+Plugin 'dense-analysis/ale'
+
+" --- Fuzzy finding files/symbols/grep ---
+Plugin 'junegunn/fzf', { 'do': { -> fzf#install() } }
+Plugin 'junegunn/fzf.vim'
+
+" --- Git diff markers in the gutter ---
+Plugin 'airblade/vim-gitgutter'
+
+" --- Snippets ---
+Plugin 'SirVer/ultisnips'
+Plugin 'honza/vim-snippets'
+
+" --- Status line ---
+Plugin 'vim-airline/vim-airline'
+
+" --- Claude Code integration ---
+Plugin 'rishi-opensource/vim-claude-code'
+
+call vundle#end()
+filetype plugin indent on
+syntax on
+
+" ============================================================
+" vim-go settings
+" ============================================================
+let g:go_highlight_types = 1
+let g:go_highlight_fields = 1
+let g:go_highlight_functions = 1
+let g:go_highlight_function_calls = 1
+let g:go_highlight_operators = 1
+let g:go_highlight_extra_types = 1
+let g:go_highlight_build_constraints = 1
+let g:go_highlight_generate_tags = 1
+
+let g:go_fmt_command = "goimports"   " run goimports (gofmt + import fixing) on save
+let g:go_fmt_autosave = 1
+let g:go_auto_type_info = 1          " show type info in the status line
+let g:go_def_mapping_enabled = 1
+
+" Go uses tabs, not spaces, by convention
+autocmd FileType go setlocal noexpandtab tabstop=4 shiftwidth=4 softtabstop=4
+
+" Handy vim-go command mappings, buffer-local to .go files
+autocmd FileType go nmap <leader>b <Plug>(go-build)
+autocmd FileType go nmap <leader>r <Plug>(go-run)
+autocmd FileType go nmap <leader>t <Plug>(go-test)
+autocmd FileType go nmap <leader>d <Plug>(go-doc)
+autocmd FileType go nmap <leader>c <Plug>(go-coverage-toggle)
+
+" ============================================================
+" Perl settings
+" ============================================================
+" vim-perl extras
+let g:perl_include_pod = 1          " highlight POD documentation
+let g:perl_fold = 1                 " enable folding for subs/packages
+let g:perl_sync_dist = 250
+
+" Common Perl community indentation style (4 spaces)
+autocmd FileType perl setlocal expandtab tabstop=4 shiftwidth=4 softtabstop=4
+
+" ============================================================
+" ALE (linting) settings
+" ============================================================
+let g:ale_linters = {
+\   'go': ['gopls', 'govet', 'golint'],
+\   'perl': ['perlcritic', 'perl'],
+\}
+let g:ale_fixers = {
+\   'go': ['goimports'],
+\   'perl': ['perltidy'],
+\   'python': ['black'],
+\   'javascript': ['prettier'],
+\   'typescript': ['prettier'],
+\   'json': ['prettier'],
+\   'css': ['prettier'],
+\   'html': ['prettier'],
+\   'markdown': ['prettier'],
+\   'yaml': ['prettier'],
+\   'rust': ['rustfmt'],
+\   'c': ['clangformat'],
+\   'cpp': ['clangformat'],
+\   'ruby': ['rubocop'],
+\   'sh': ['shfmt'],
+\   'lua': ['stylua'],
+\   'java': ['google_java_format'],
+\}
+let g:ale_lint_on_text_changed = 'normal'
+let g:ale_lint_on_insert_leave = 1
+let g:ale_sign_error = '✗'
+let g:ale_sign_warning = '⚠'
+
+" ---------- Autocomplete (LSP-backed, via ALE + gopls) ----------
+let g:ale_completion_enabled = 1
+let g:ale_completion_autoimport = 1     " auto-add missing imports on accepted completion
+set omnifunc=ale#completion#OmniFunc
+set completeopt=menu,menuone,popup,noinsert,noselect
+set shortmess+=c                        " suppress completion messages in the cmdline
+
+" Tab cycles through the popup menu; Enter accepts the selected entry
+inoremap <expr> <Tab>   pumvisible() ? "\<C-n>" : "\<Tab>"
+inoremap <expr> <S-Tab> pumvisible() ? "\<C-p>" : "\<S-Tab>"
+
+" Tidy the current buffer with whatever formatter ALE has configured
+" for its filetype (goimports, perltidy, black, prettier, rustfmt, ...)
+nnoremap <leader>= :ALEFix<CR>
+
+" ============================================================
+" fzf mappings
+" ============================================================
+nnoremap <leader>f :Files<CR>
+nnoremap <leader>g :GFiles<CR>
+nnoremap <leader>a :Rg<CR>
+nnoremap <leader>l :Lines<CR>
+
+" ============================================================
+" Misc quality-of-life
+" ============================================================
+" Quickly edit/reload this file
+nnoremap <leader>ev :edit $MYVIMRC<CR>
+nnoremap <leader>sv :source $MYVIMRC<CR>
+
+" Move between splits with Ctrl+hjkl
+nnoremap <C-h> <C-w>h
+nnoremap <C-j> <C-w>j
+nnoremap <C-k> <C-w>k
+nnoremap <C-l> <C-w>l
+
+" ============================================================
+" Claude Code
+" ============================================================
+let g:claude_code_position = 'float'
+let g:claude_code_float_width = 0.85
+let g:claude_code_float_height = 0.85
+let g:claude_code_use_git_root = 1
+let g:claude_code_multi_instance = 1
+let g:claude_code_diff_preview = 1
+
+" Zoom the terminal without leaving normal mode (no default keymap for this)
+nnoremap <leader>cz :Claude zoom<CR>
+
