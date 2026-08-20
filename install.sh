@@ -20,3 +20,14 @@ fi
 vim +PluginInstall +qall
 
 echo "vim config installed."
+
+# Point iTerm2 at the dotfiles copy of its preferences so settings (profiles,
+# keybindings, appearance, etc.) stay in sync across machines. iTerm2 must be
+# quit and relaunched for this to take effect if it's currently running.
+defaults write com.googlecode.iterm2 PrefsCustomFolder -string "$DOTFILES_DIR/iterm2"
+defaults write com.googlecode.iterm2 LoadPrefsFromCustomFolder -bool true
+
+echo "iTerm2 pointed at $DOTFILES_DIR/iterm2 for preferences."
+echo "Quit and relaunch iTerm2 to pick this up, then in iTerm2 go to"
+echo "Preferences > General > Preferences and check 'Save changes automatically'"
+echo "so future edits get written back into the dotfiles repo."
