@@ -122,6 +122,84 @@ let g:perl_sync_dist = 250
 autocmd FileType perl setlocal expandtab tabstop=4 shiftwidth=4 softtabstop=4
 
 " ============================================================
+" Perl test coverage (Devel::Cover -> coloured lines + signs)
+" ============================================================
+" Requires: cpanm --local-lib=~/perl5 Devel::Cover Template::Toolkit
+" (~/.zshrc activates that local::lib, so `cover` is on $PATH).
+"
+" Workflow, from the project root:
+"   :CovGen     run the test suite under Devel::Cover and build the vim report
+"   :CovLoad    source cover_db/coverage.vim (searched for upwards from the
+"               current file); this colours lines by coverage and defines
+"               :Cov / :Uncov
+"   <leader>cc / <leader>cx   show / hide the signs in this buffer
+"
+" Gutter letters: P pod, S statement, R subroutine, B branch, C condition.
+" Green = covered, red = not covered.  Colours are defined in
+" ~/.vim/local/devel-cover.vim, which coverage.vim finds and sources itself.
+
+" Override per project if the suite is not `prove -lr t`.
+let g:devel_cover_test_cmd =
+      \ 'cover -delete && HARNESS_PERL_SWITCHES=-MDevel::Cover prove -lr t; '
+      \ . 'cover -report vim'
+
+" Nearest directory at or above the current file that looks like a project root.
+function! s:CovRoot() abort
+  let l:dir = expand('%:p:h')
+  if empty(l:dir) || !isdirectory(l:dir)
+    let l:dir = getcwd()
+  endif
+  for l:marker in ['cover_db', 't', 'Makefile.PL', 'Build.PL', 'cpanfile', '.git']
+    let l:found = finddir(l:marker, l:dir . ';')
+    if empty(l:found)
+      let l:found = findfile(l:marker, l:dir . ';')
+    endif
+    if !empty(l:found)
+      return fnamemodify(l:found, ':p:h:h')
+    endif
+  endfor
+  return l:dir
+endfunction
+
+function! s:CovLoad() abort
+  let l:report = findfile('cover_db/coverage.vim', expand('%:p:h') . ';')
+  if empty(l:report)
+    let l:report = findfile('cover_db/coverage.vim', getcwd() . ';')
+  endif
+  if empty(l:report)
+    echohl WarningMsg | echo 'No cover_db/coverage.vim found - run :CovGen' | echohl None
+    return
+  endif
+  exe 'source ' . fnameescape(fnamemodify(l:report, ':p'))
+
+  " g:perl_fold shuts whole packages into one fold, which would hide the
+  " coverage colours; open folds here so the highlighting is actually visible.
+  " (zM re-closes them.)
+  if &foldenable && &foldmethod !=# "manual"
+    normal! zR
+  endif
+endfunction
+
+function! s:CovGen() abort
+  let l:root = s:CovRoot()
+  echo 'Running coverage in ' . l:root
+  exe '!cd ' . shellescape(l:root) . ' && ' . g:devel_cover_test_cmd
+  if v:shell_error && !filereadable(l:root . '/cover_db/coverage.vim')
+    echohl ErrorMsg | echo 'Coverage run failed - see the output above' | echohl None
+    return
+  endif
+  call s:CovLoad()
+endfunction
+
+command! -nargs=0 CovGen  call s:CovGen()
+command! -nargs=0 CovLoad call s:CovLoad()
+
+autocmd FileType perl nnoremap <buffer> <leader>cg :CovGen<CR>
+autocmd FileType perl nnoremap <buffer> <leader>cl :CovLoad<CR>
+autocmd FileType perl nnoremap <buffer> <leader>cc :Cov<CR>
+autocmd FileType perl nnoremap <buffer> <leader>cx :Uncov<CR>
+
+" ============================================================
 " ALE (linting) settings
 " ============================================================
 let g:ale_linters = {

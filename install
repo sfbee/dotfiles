@@ -23,6 +23,15 @@ install_vim() {
   fi
   ln -sf "$DOTFILES_DIR/vim/vimrc" "$HOME/.vimrc"
 
+  # Symlink the Devel::Cover coverage colours into ~/.vim/local. The generated
+  # cover_db/coverage.vim searches ~/.vim/** for a file named devel-cover.vim
+  # and sources it, so this path just has to exist somewhere under ~/.vim.
+  mkdir -p "$HOME/.vim/local"
+  if [ -e "$HOME/.vim/local/devel-cover.vim" ] && [ ! -L "$HOME/.vim/local/devel-cover.vim" ]; then
+    mv "$HOME/.vim/local/devel-cover.vim" "$HOME/.vim/local/devel-cover.vim.bak.$(date +%s)"
+  fi
+  ln -sf "$DOTFILES_DIR/vim/local/devel-cover.vim" "$HOME/.vim/local/devel-cover.vim"
+
   # Install Vundle if missing.
   VUNDLE_DIR="$HOME/.vim/bundle/Vundle.vim"
   if [ ! -d "$VUNDLE_DIR" ]; then
