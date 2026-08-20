@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# Bootstrap dotfiles on a new box. Safe to re-run.
+#
+# usage: ./install [component...]
+#   with no args, installs everything.
+#   pass one or more of: vim iterm2
+set -euo pipefail
+
+DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ALL_COMPONENTS=(vim iterm2)
+
+usage() {
+  echo "usage: $0 [component...]"
+  echo "  components: ${ALL_COMPONENTS[*]}"
+  echo "  no args installs all of them"
+}
+
+install_vim() {
+  echo "==> vim"
+  # Symlink .vimrc, backing up any existing file first.
+  if [ -e "$HOME/.vimrc" ] && [ ! -L "$HOME/.vimrc" ]; then
+    mv "$HOME/.vimrc" "$HOME/.vimrc.bak.$(date +%s)"
+  fi
+  ln -sf "$DOTFILES_DIR/vim/vimrc" "$HOME/.vimrc"
+
+  # Install Vundle if missing.
+  VUNDLE_DIR="$HOME/.vim/bundle/Vundle.vim"
+  if [ ! -d "$VUNDLE_DIR" ]; then
+    git clone --depth 1 https://github.com/VundleVim/Vundle.vim.git "$VUNDLE_DIR"
+  fi
+
+  # Install/update all plugins listed in .vimrc.
+  vim +PluginInstall +qall
+
+  echo "vim config installed."
+}
+
+install_iterm2() {
+  echo "==> iterm2"
+  # Point iTerm2 at the dotfiles copy of its preferences so settings
+  # (profiles, keybindings, appearance, etc.) stay in sync across machines.
+  # iTerm2 must be quit and relaunched for this to take effect if it's
+  # currently running.
+  defaults write com.googlecode.iterm2 PrefsCustomFolder -string "$DOTFILES_DIR/iterm2"
+  defaults write com.googlecode.iterm2 LoadPrefsFromCustomFolder -bool true
+
+  echo "iTerm2 pointed at $DOTFILES_DIR/iterm2 for preferences."
+  echo "Quit and relaunch iTerm2 to pick this up, then in iTerm2 go to"
+  echo "Preferences > General > Preferences and check 'Save changes automatically'"
+  echo "so future edits get written back into the dotfiles repo."
+}
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  exit 0
+fi
+
+if [[ $# -eq 0 ]]; then
+  COMPONENTS=("${ALL_COMPONENTS[@]}")
+else
+  COMPONENTS=("$@")
+  for c in "${COMPONENTS[@]}"; do
+    case " ${ALL_COMPONENTS[*]} " in
+      *" $c "*) ;;
+      *)
+        echo "unknown component: $c" >&2
+        usage
+        exit 1
+        ;;
+    esac
+  done
+fi
+
+for c in "${COMPONENTS[@]}"; do
+  "install_$c"
+done
